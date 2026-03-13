@@ -17,23 +17,23 @@
 <div id="menuOverlay" class="menuOverlay"></div>
 <nav id="sideMenu" class="sideMenu">
   <button id="closeMenuBtn" class="closeMenuBtn">✕</button>
-  <h2 style="margin-top: 0; font-family: 'Space Grotesk', sans-serif;">Navigation</h2>
+  <h2 style="margin-top: 0; font-family: 'Space Grotesk', sans-serif;">Menu</h2>
   <hr style="border: none; border-top: 1px solid var(--border-color); margin-bottom: 20px;">
   
-  <a href="#statsSection" class="menuLink">📊 Your Stats</a>
-  <a href="#inputsSection" class="menuLink">📝 Enter Credits</a>
-  <a href="#goalsSection" class="menuLink">🎓 University Goals</a>
-  <a href="#pathwaySection" class="menuLink">🎯 Target Pathway</a>
+  <a href="#statsSection" class="menuLink">Current Stats</a>
+  <a href="#inputsSection" class="menuLink">Add Credits</a>
+  <a href="#goalsSection" class="menuLink">Uni Goals</a>
+  <a href="#pathwaySection" class="menuLink">Rank Score Pathways</a>
   
   <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
   
-  <button id="openThemeBtn" class="menuLink themeMenuBtn">🎨 Customize Theme</button>
+  <button id="openThemeBtn" class="menuLink themeMenuBtn">Change Theme</button>
 </nav>
 
 <div id="themeModal" class="modalOverlay">
   <div class="modalContent">
-    <h2 style="margin-top: 0; font-family: 'Space Grotesk', sans-serif;">Customize Theme</h2>
-    <p style="color: var(--text-muted); font-size: 14px; margin-top: -5px;">Select a color scheme for your app.</p>
+    <h2 style="margin-top: 0; font-family: 'Space Grotesk', sans-serif;">Change Theme</h2>
+    <p style="color: var(--text-muted); font-size: 14px; margin-top: -5px;">Pick a color scheme that looks good to you.</p>
     
     <div class="themeGrid">
       <button class="themeSwatch" data-theme="theme-default" style="background: #0f172a; border-color: #6366f1;"></button>
@@ -48,12 +48,12 @@
 
 <header>
   <div class="header-content">
-    <button id="menuBtn" class="iconBtn">☰</button>
+    <button id="menuBtn" class="iconBtn">Menu</button>
     <div class="header-titles">
       <h1>NCEA Rank Score Planner</h1>
-      <p>Plan your pathway to New Zealand universities</p>
+      <p>Sort out your UE and rank score for NZ unis</p>
     </div>
-    <button id="resetBtn" class="resetBtn iconBtn">↻ <span class="hideMobile">Start Over</span></button>
+    <button id="resetBtn" class="resetBtn iconBtn"><span class="hideMobile">Reset All</span></button>
   </div>
 </header>
 
@@ -117,12 +117,12 @@
     <div class="panel warningPanel">
       <h2>Warnings & Suggestions</h2>
       <div id="warningList">
-        <p class="noWarningsPlaceholder">No warnings currently. Keep up the good work!</p>
+        <p class="noWarningsPlaceholder">Looking good! No missing requirements right now.</p>
       </div>
     </div>
 
     <div class="panel goalsPanel">
-      <h2>University Goals</h2>
+      <h2>Uni Goals</h2>
       <div class="goalControls">
         <select id="universitySelect"></select>
         <select id="degreeSelect"></select>
@@ -135,7 +135,7 @@
   <section id="pathwaySection" class="row targetPathway">
     <div class="panel fullWidthPanel">
       <h2>Target Pathway Planner</h2>
-      <p style="color: var(--text-muted); font-size: 14px; margin-top: -10px; margin-bottom: 20px;">Enter your desired rank score to see the best credit combinations to achieve it.</p>
+      <p style="color: var(--text-muted); font-size: 14px; margin-top: -10px; margin-bottom: 20px;">Type in your target rank score to see the easiest ways to hit it.</p>
       
       <div class="goalControls">
         <input type="number" id="targetScoreInput" placeholder="Enter target score (e.g. 250)" min="1" max="320">
@@ -149,8 +149,8 @@
 </main>
 
 <footer class="app-footer">
-  <p><strong>Disclaimer:</strong> This tool is a guide only. Results may not be 100% accurate and should be verified with official university websites.</p>
-  <p>Created by Oscar Ellis</p>
+  <p><strong>Note:</strong> This is just a guide to help you plan. Always double-check your actual requirements directly with the uni.</p>
+  <p>Built by Oscar Ellis</p>
 </footer>
 
 <script src="script.js"></script>
