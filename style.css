@@ -178,7 +178,8 @@ header {
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   color: var(--text-main);
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 600;
   padding: 10px 14px;
   border-radius: 8px;
   cursor: pointer;
@@ -352,7 +353,7 @@ input[type=number], select {
 }
 @media(max-width: 650px) {
   header h1 { font-size: 22px; }
-  .hideMobile { display: none; } /* Hides "Start Over" text, leaves icon */
+  .hideMobile { display: none; }
   .topBar { flex-direction: column; }
   .middleBar { flex-direction: column; gap: 20px; }
   .inputSection { flex: 1 1 100%; }
