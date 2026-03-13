@@ -113,8 +113,6 @@ const menuLinks = document.querySelectorAll(".menuLink:not(.themeMenuBtn)");
 // --- INIT ---
 window.onload = () => {
   populateUniversities();
-  
-  // Load saved data & theme BEFORE attaching event listeners
   loadData();
 
   [excellenceEl, meritEl, achievedEl, ueReading, ueWriting, ueNumeracy,
@@ -133,7 +131,6 @@ window.onload = () => {
 
 // --- UI & THEME LOGIC ---
 function setupUI() {
-  // Menu Handlers
   menuBtn.addEventListener("click", () => {
     sideMenu.classList.add("open");
     menuOverlay.classList.add("active");
@@ -148,7 +145,6 @@ function setupUI() {
   menuOverlay.addEventListener("click", closeMenu);
   menuLinks.forEach(link => link.addEventListener("click", closeMenu));
 
-  // Theme Modal Handlers
   openThemeBtn.addEventListener("click", () => {
     closeMenu();
     themeModal.classList.add("active");
@@ -158,12 +154,11 @@ function setupUI() {
     themeModal.classList.remove("active");
   });
 
-  // Theme Application
   themeSwatches.forEach(swatch => {
     swatch.addEventListener("click", (e) => {
       const selectedTheme = e.target.getAttribute("data-theme");
       document.body.className = selectedTheme;
-      saveData(); // Save theme selection
+      saveData();
     });
   });
 }
@@ -194,7 +189,6 @@ function loadData() {
   if (savedData) {
     const appData = JSON.parse(savedData);
     
-    // Apply theme first
     if(appData.currentTheme) document.body.className = appData.currentTheme;
 
     excellenceEl.value = appData.excellence || 0;
@@ -217,7 +211,7 @@ function loadData() {
 }
 
 function handleReset() {
-  if(confirm("Are you sure you want to clear all your credits and goals? This cannot be undone.")) {
+  if(confirm("Are you sure you want to clear all your data? You can't undo this.")) {
     localStorage.removeItem('nceaRankScoreData');
     location.reload(); 
   }
@@ -318,16 +312,16 @@ function updateGoals(){
     let colorClass = "";
 
     if(missingSubjects.length>0){
-      statusText = "❌ Missing: "+missingSubjects.join(", ");
+      statusText = "Missing: "+missingSubjects.join(", ");
       colorClass = "bg-red";
     } else if(rankScore < g.rank-20){
-      statusText = "🔴 Far from required rank";
+      statusText = "A bit far off the required rank";
       colorClass = "bg-red";
     } else if(rankScore < g.rank){
-      statusText = "⚠ Close to required rank";
+      statusText = "Almost there";
       colorClass = "bg-orange";
     } else {
-      statusText = "✔ Goal Achieved";
+      statusText = "Goal reached!";
       colorClass = "bg-green";
     }
     
@@ -341,9 +335,9 @@ function updateGoals(){
       <div class="goalHeader">
         <h3 style="margin:0;">${g.name}</h3>
       </div>
-      <p style="margin:5px 0;"><strong>Required Rank Score:</strong> ${displayRank}</p>
-      <p style="margin:5px 0;"><strong>Required Subjects:</strong> ${g.req.length>0 ? g.req.join(", ") : "None"}</p>
-      <p style="margin:5px 0;"><strong>Your Status:</strong> ${statusText}</p>
+      <p style="margin:5px 0;"><strong>Target Score:</strong> ${displayRank}</p>
+      <p style="margin:5px 0;"><strong>Subjects Needed:</strong> ${g.req.length>0 ? g.req.join(", ") : "None"}</p>
+      <p style="margin:5px 0;"><strong>Status:</strong> ${statusText}</p>
       ${g.note ? `<p style='margin:5px 0; font-size:13px; opacity:0.8;'><i>${g.note}</i></p>` : ""}
       
       ${g.link ? `<a href="${g.link}" target="_blank" class="infoLink">Course Info ↗</a>` : ""}
@@ -365,7 +359,7 @@ function updateWarnings(){
     if(missingSubjects.length>0){
       const card = document.createElement("div");
       card.className="warningCard";
-      card.innerHTML = `⚠ <b>${g.name}</b>: Missing subjects: ${missingSubjects.join(", ")}`;
+      card.innerHTML = `<b>${g.name}</b>: Looks like you're missing ${missingSubjects.join(", ")}`;
       warningList.appendChild(card);
       warningCount++;
     }
@@ -374,7 +368,7 @@ function updateWarnings(){
   if(!ueReading.checked || !ueWriting.checked){
     const card = document.createElement("div");
     card.className="warningCard medium";
-    card.innerHTML="⚠ UE Literacy not achieved";
+    card.innerHTML="Missing UE Literacy";
     warningList.appendChild(card);
     warningCount++;
   }
@@ -382,7 +376,7 @@ function updateWarnings(){
   if(!ueNumeracy.checked){
     const card = document.createElement("div");
     card.className="warningCard medium";
-    card.innerHTML="⚠ UE Numeracy not achieved";
+    card.innerHTML="Missing UE Numeracy";
     warningList.appendChild(card);
     warningCount++;
   }
@@ -390,13 +384,13 @@ function updateWarnings(){
   if(subPhysics.checked && !subCalc.checked){
     const card = document.createElement("div");
     card.className="warningCard";
-    card.innerHTML="Suggestion: Engineering and Advanced Physics usually require Calculus.";
+    card.innerHTML="Tip: If you're doing Engineering or Physics, you really should take Calculus.";
     warningList.appendChild(card);
     warningCount++;
   }
 
   if (warningCount === 0) {
-    warningList.innerHTML = `<p class="noWarningsPlaceholder">No warnings currently. Keep up the good work!</p>`;
+    warningList.innerHTML = `<p class="noWarningsPlaceholder">Looking good! No missing requirements right now.</p>`;
   }
 }
 
@@ -407,7 +401,7 @@ function generatePathways() {
   saveData();
 
   if (isNaN(target) || target <= 0 || target > 320) {
-    pathwayResultsContainer.innerHTML = '<p style="color: #ef4444; margin-top: 10px;">Please enter a valid target score between 1 and 320.</p>';
+    pathwayResultsContainer.innerHTML = '<p style="color: #ef4444; margin-top: 10px;">Make sure you enter a score between 1 and 320.</p>';
     return;
   }
 
@@ -454,9 +448,9 @@ function generatePathways() {
   // Generate Top 3 HTML
   let mainHtml = `
     <div class="pathwayGrid">
-      ${createPathwayCard("The 'Easiest' Path", "Maximizes Achieved & Merit", e1, m1, a1)}
-      ${createPathwayCard("The 'Balanced' Path", "An even spread of all grades", e3, m3, a3)}
-      ${createPathwayCard("The 'Fastest' Path", "Fewest total credits (Max Excellence)", e2, m2, a2)}
+      ${createPathwayCard("Easiest Route", "Heavy on Achieved & Merit", e1, m1, a1)}
+      ${createPathwayCard("Balanced Spread", "A mix of everything", e3, m3, a3)}
+      ${createPathwayCard("Fewest Credits", "Mostly Excellence credits", e2, m2, a2)}
     </div>
   `;
 
@@ -495,12 +489,12 @@ function generatePathways() {
   let extraHtml = '';
   if (extraPaths.length > 0) {
     let cardsHtml = extraPaths.map((p, index) => 
-      createPathwayCard(`Alternative Option ${index + 1}`, `Valid Combination`, p.e, p.m, p.a)
+      createPathwayCard(`Option ${index + 1}`, `Alternative mix`, p.e, p.m, p.a)
     ).join('');
     
     extraHtml = `
       <div style="text-align: center; width: 100%; margin-top: 15px;">
-        <button id="showMoreBtn" class="secondaryBtn">Find More Combinations ↓</button>
+        <button id="showMoreBtn" class="secondaryBtn">Show More Combinations ↓</button>
       </div>
       <div id="extraPathwaysGrid" class="pathwayGrid" style="display: none; margin-top: 20px;">
         ${cardsHtml}
@@ -519,7 +513,7 @@ function generatePathways() {
         this.innerText = 'Hide Combinations ↑';
       } else {
         extraGrid.style.display = 'none';
-        this.innerText = 'Find More Combinations ↓';
+        this.innerText = 'Show More Combinations ↓';
       }
     });
   }
@@ -537,7 +531,7 @@ function createPathwayCard(title, desc, e, m, a) {
         <li><span style="color: #3b82f6; font-weight: 600;">Merit:</span> <span>${m}</span></li>
         <li><span style="color: #f59e0b; font-weight: 600;">Achieved:</span> <span>${a}</span></li>
         <li class="total"><span style="color: var(--text-muted);">Total Credits:</span> <span>${totalCredits} / 80</span></li>
-        <li style="font-size: 12px; color: var(--text-muted); margin-top: 5px; border:none; padding-top:0;">Actual Score Generated: ${exactScore}</li>
+        <li style="font-size: 12px; color: var(--text-muted); margin-top: 5px; border:none; padding-top:0;">Score Generated: ${exactScore}</li>
       </ul>
     </div>
   `;
