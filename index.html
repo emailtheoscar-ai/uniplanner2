@@ -11,145 +11,348 @@
   <title>NCEA Rank Score Planner</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
-<div id="menuOverlay" class="menuOverlay"></div>
-<nav id="sideMenu" class="sideMenu">
-  <button id="closeMenuBtn" class="closeMenuBtn">✕</button>
-  <h2 style="margin-top: 0; font-family: 'Space Grotesk', sans-serif;">Menu</h2>
-  <hr style="border: none; border-top: 1px solid var(--border-color); margin-bottom: 20px;">
-  
-  <a href="#statsSection" class="menuLink">Current Stats</a>
-  <a href="#inputsSection" class="menuLink">Add Credits</a>
-  <a href="#goalsSection" class="menuLink">Uni Goals</a>
-  <a href="#pathwaySection" class="menuLink">Rank Score Pathways</a>
-  
-  <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
-  
-  <button id="openThemeBtn" class="menuLink themeMenuBtn">Change Theme</button>
-</nav>
+<button id="openStatsBtn" class="floatingStatsBtn">
+  📊 <span class="btnText">View Stats & Endorsements</span>
+</button>
+
+<div id="statsModal" class="modalOverlay">
+  <div class="modalContent statsModalContent">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif;">Stats & Endorsements</h2>
+      <div>
+        <button id="shareIgBtn" class="primaryBtn" style="background: #e1306c; padding: 8px 16px; font-size: 13px; margin-right: 10px;">📸 Share</button>
+        <button id="closeStatsBtn" class="secondaryBtn" style="padding: 8px 16px;">✕ Close</button>
+      </div>
+    </div>
+    
+    <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; justify-content: center;">
+      <div style="width: 250px; height: 250px;">
+        <canvas id="creditsChart"></canvas>
+      </div>
+      <div class="stats-text" style="flex: 1; min-width: 250px;">
+        <h3 style="margin-top:0;">Credit Summary</h3>
+        <p>Total Credits Logged: <strong id="totalCreditsText">0</strong></p>
+        <p style="color: #10b981;">Total Excellence: <strong id="totalEText">0</strong></p>
+        <p style="color: #3b82f6;">Total Merit: <strong id="totalMText">0</strong></p>
+        <p style="color: #f59e0b;">Total Achieved: <strong id="totalAText">0</strong></p>
+        
+        <h3 style="margin-top: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Level 3 Endorsements (50 Credits)</h3>
+        <div style="margin-bottom: 10px;">
+          <div style="display:flex; justify-content: space-between; font-size:13px; margin-bottom:5px;">
+            <span>Excellence Endorsement</span> <span id="endorseEText">0/50</span>
+          </div>
+          <div class="progressBar"><div id="endorseEBar" class="progressFill" style="background:#10b981; width:0%;"></div></div>
+        </div>
+        <div>
+          <div style="display:flex; justify-content: space-between; font-size:13px; margin-bottom:5px;">
+            <span>Merit Endorsement</span> <span id="endorseMText">0/50</span>
+          </div>
+          <div class="progressBar"><div id="endorseMBar" class="progressFill" style="background:#3b82f6; width:0%;"></div></div>
+        </div>
+
+        <h3 style="margin-top: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px;">Subject Endorsements (14+ Credits)</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top:-5px;">*Assuming you meet the 3 internal/external rule.</p>
+        <ul id="subjectEndorsementsList" style="font-size: 14px; padding-left: 20px; margin-bottom: 0;">
+          <li style="color: var(--text-muted);">No subject endorsements yet.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="themeModal" class="modalOverlay">
   <div class="modalContent">
     <h2 style="margin-top: 0; font-family: 'Space Grotesk', sans-serif;">Change Theme</h2>
-    <p style="color: var(--text-muted); font-size: 14px; margin-top: -5px;">Pick a color scheme that looks good to you.</p>
+    <p style="color: var(--text-muted); font-size: 14px; margin-top: -5px;">Pick a preset or create your own custom theme.</p>
     
     <div class="themeGrid">
-      <button class="themeSwatch" data-theme="theme-default" style="background: #0f172a; border-color: #6366f1;"></button>
-      <button class="themeSwatch" data-theme="theme-ocean" style="background: #082f49; border-color: #0ea5e9;"></button>
-      <button class="themeSwatch" data-theme="theme-forest" style="background: #022c22; border-color: #10b981;"></button>
-      <button class="themeSwatch" data-theme="theme-sunset" style="background: #2e1065; border-color: #8b5cf6;"></button>
+      <button class="themeSwatch" data-theme="theme-default" style="background: #0f172a; border-color: #6366f1;" title="Midnight Dark"></button>
+      <button class="themeSwatch" data-theme="theme-ocean" style="background: #082f49; border-color: #0ea5e9;" title="Ocean Blue"></button>
+      <button class="themeSwatch" data-theme="theme-forest" style="background: #022c22; border-color: #10b981;" title="Forest Green"></button>
+      <button class="themeSwatch" data-theme="theme-sunset" style="background: #2e1065; border-color: #8b5cf6;" title="Sunset Purple"></button>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
+
+    <h3 style="margin-top: 0; font-size: 16px;">Custom Colors</h3>
+    <div class="customThemeGroup">
+      <div class="colorPickerItem">
+        <label for="primaryColor">Accent Color</label>
+        <input type="color" id="primaryColor" value="#6366f1">
+      </div>
+      <div class="colorPickerItem">
+        <label for="bgColor">Background</label>
+        <input type="color" id="bgColor" value="#0f172a">
+      </div>
     </div>
     
-    <button id="closeThemeBtn" class="secondaryBtn" style="width: 100%; margin-top: 20px;">Done</button>
+    <button id="closeThemeBtn" class="primaryBtn" style="width: 100%; margin-top: 20px;">Done</button>
   </div>
+</div>
+
+<div id="shareCard" class="shareCardHidden">
+  <h2 style="margin:0; font-family: 'Space Grotesk'; font-size: 28px;">My NCEA Rank Score</h2>
+  <h1 id="shareScore" style="font-size: 80px; margin: 10px 0; color: var(--accent-primary);">0</h1>
+  <p id="shareUE" style="font-size: 18px; margin:0;">UE Status: Pending</p>
+  <div style="margin-top: 20px; font-size: 14px; opacity: 0.7;">Calculated via NCEA Planner</div>
 </div>
 
 <header>
   <div class="header-content">
-    <button id="menuBtn" class="iconBtn">Menu</button>
     <div class="header-titles">
       <h1>NCEA Rank Score Planner</h1>
-      <p>Sort out your UE and rank score for NZ unis</p>
+      <p>Sort out your UE, rank score, and endorsements for NZ unis</p>
     </div>
-    <button id="resetBtn" class="resetBtn iconBtn"><span class="hideMobile">Reset All</span></button>
+    <div class="header-actions">
+      <select id="profileSelect" class="profileSelect">
+        <option value="default">My Profile</option>
+      </select>
+      <button id="addProfileBtn" class="iconBtn" title="Add Profile">+</button>
+      <button id="openThemeBtn" class="iconBtn">🎨 Theme</button>
+      <button id="resetBtn" class="resetBtn iconBtn">↻ <span class="hideMobile">Reset</span></button>
+    </div>
   </div>
 </header>
 
 <main class="container">
 
-  <section id="statsSection" class="row topBar">
-    <div class="statCard bg-default" id="rankScoreCard">
-      <h3>Rank Score</h3>
-      <p id="rankScore">0</p>
-      <span>/ 320</span>
-    </div>
-    <div class="statCard bg-red" id="ueLitCard">
-      <h3>UE Literacy</h3>
-    </div>
-    <div class="statCard bg-red" id="ueNumCard">
-      <h3>UE Numeracy</h3>
-    </div>
-  </section>
+  <nav class="tabNav">
+    <button class="tabBtn active" data-tab="tab-calculator">Calculator & Pathways</button>
+    <button class="tabBtn" data-tab="tab-goals">Uni Goals & Compare</button>
+    <button class="tabBtn" data-tab="tab-matcher">Degree Matcher</button>
+    <button class="tabBtn" data-tab="tab-scholarships">Scholarships</button>
+    <button class="tabBtn" data-tab="tab-mock">Mock Exams</button>
+  </nav>
 
-  <section id="inputsSection" class="row middleBar panel">
-    <div class="inputSection creditsSection">
-      <h3>NCEA Credits</h3>
-      <div class="creditRow">
-        <div class="inputGroup">
-          <label>Excellence</label>
-          <input id="excellence" type="number" min="0" value="0">
+  <div id="tab-calculator" class="tabPane active">
+    <div class="instructions">
+      <strong>Start here:</strong> Enter your overall credits, or flick the switch to calculate by specific subjects.
+    </div>
+
+    <section class="row topBar">
+      <div class="statCard bg-default" id="rankScoreCard">
+        <h3>Rank Score</h3>
+        <p id="rankScore">0</p>
+        <span>/ 320</span>
+      </div>
+      <div class="statCard bg-red" id="ueLitCard">
+        <h3>UE Literacy</h3>
+      </div>
+      <div class="statCard bg-red" id="ueNumCard">
+        <h3>UE Numeracy</h3>
+      </div>
+    </section>
+
+    <section class="row middleBar panel">
+      <div class="inputSection fullWidthPanel" style="flex: 2;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+          <h3 style="margin: 0; border: none; padding: 0;">NCEA Credits</h3>
+          <div class="toggle-container">
+            <span style="font-size: 14px; color: var(--text-muted); margin-right: 10px;">Specific Subjects</span>
+            <label class="switch">
+              <input type="checkbox" id="modeToggle">
+              <span class="slider round"></span>
+            </label>
+          </div>
         </div>
-        <div class="inputGroup">
-          <label>Merit</label>
-          <input id="merit" type="number" min="0" value="0">
+
+        <div id="overallCreditsSection">
+          <p style="color: var(--text-muted); font-size: 13px; margin-top:-5px; margin-bottom:15px;">Enter your total NCEA Level 3 credits.</p>
+          <div class="creditRow">
+            <div class="inputGroup">
+              <label>Excellence</label>
+              <input id="excellence" type="number" min="0" value="0">
+            </div>
+            <div class="inputGroup">
+              <label>Merit</label>
+              <input id="merit" type="number" min="0" value="0">
+            </div>
+            <div class="inputGroup">
+              <label>Achieved</label>
+              <input id="achieved" type="number" min="0" value="0">
+            </div>
+          </div>
         </div>
-        <div class="inputGroup">
-          <label>Achieved</label>
-          <input id="achieved" type="number" min="0" value="0">
+
+        <div id="specificSubjectsSection" style="display: none;">
+          <p style="color: var(--text-muted); font-size: 13px; margin-top:-5px; margin-bottom:15px;">Enter your credits row by row. Typing core subjects (like 'Physics') auto-checks prerequisites.</p>
+          <div id="subjectsContainer" class="subjects-container"></div>
+          <button id="addSubjectBtn" class="secondaryBtn" style="margin-top: 15px;">+ Add Another Subject</button>
         </div>
       </div>
-    </div>
 
-    <div class="inputSection checksSection">
-      <h3>University Entrance</h3>
-      <div class="checkboxGrid">
-        <label class="checkItem"><input type="checkbox" id="ueReading"><span>Literacy — Reading</span></label>
-        <label class="checkItem"><input type="checkbox" id="ueWriting"><span>Literacy — Writing</span></label>
-        <label class="checkItem"><input type="checkbox" id="ueNumeracy"><span>Numeracy</span></label>
+      <div class="inputSection checksSection" style="flex: 1;">
+        <h3>University Entrance</h3>
+        <div class="checkboxGrid">
+          <label class="checkItem"><input type="checkbox" id="ueReading"><span>Literacy — Reading</span></label>
+          <label class="checkItem"><input type="checkbox" id="ueWriting"><span>Literacy — Writing</span></label>
+          <label class="checkItem"><input type="checkbox" id="ueNumeracy"><span>Numeracy</span></label>
+        </div>
+        
+        <h3 style="margin-top: 25px;">Core Subjects Taken</h3>
+        <p style="color: var(--text-muted); font-size: 12px; margin-top:-10px;">(Tick for uni prerequisites)</p>
+        <div class="checkboxGrid">
+          <label class="checkItem"><input type="checkbox" id="subCalc"><span>Calculus</span></label>
+          <label class="checkItem"><input type="checkbox" id="subPhysics"><span>Physics</span></label>
+          <label class="checkItem"><input type="checkbox" id="subChem"><span>Chemistry</span></label>
+          <label class="checkItem"><input type="checkbox" id="subBio"><span>Biology</span></label>
+          <label class="checkItem"><input type="checkbox" id="subStats"><span>Statistics</span></label>
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="inputSection checksSection">
-      <h3>Subjects Taken</h3>
-      <div class="checkboxGrid">
-        <label class="checkItem"><input type="checkbox" id="subCalc"><span>Calculus</span></label>
-        <label class="checkItem"><input type="checkbox" id="subPhysics"><span>Physics</span></label>
-        <label class="checkItem"><input type="checkbox" id="subChem"><span>Chemistry</span></label>
-        <label class="checkItem"><input type="checkbox" id="subBio"><span>Biology</span></label>
-        <label class="checkItem"><input type="checkbox" id="subStats"><span>Statistics</span></label>
+    <section class="row targetPathway">
+      <div class="panel fullWidthPanel">
+        <h2>Target Pathway Planner</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: -10px; margin-bottom: 20px;">Type in your target rank score to see the easiest ways to hit it.</p>
+        <div class="goalControls">
+          <input type="number" id="targetScoreInput" placeholder="Enter target score (e.g. 250)" min="1" max="320">
+          <button id="calcPathwaysBtn" class="primaryBtn">Find Pathways</button>
+        </div>
+        <div id="pathwayResultsContainer"></div>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <section id="goalsSection" class="row bottomSplit">
-    <div class="panel warningPanel">
-      <h2>Warnings & Suggestions</h2>
-      <div id="warningList">
-        <p class="noWarningsPlaceholder">Looking good! No missing requirements right now.</p>
+  <div id="tab-goals" class="tabPane">
+    <div class="instructions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap:10px;">
+      <span><strong>Check your goals:</strong> Add the degrees you are aiming for to track prerequisites.</span>
+      <button id="exportPdfBtn" class="primaryBtn" style="background: #10b981;">📄 Download PDF</button>
+    </div>
+
+    <div class="warningCard medium" style="margin-bottom: 25px; border-left: 4px solid #f59e0b; background: rgba(245, 158, 11, 0.1);">
+      <strong>Crucial Disclaimer:</strong> Meeting a rank score means you guarantee entry to <em>most</em> general programs. However, highly competitive degrees (Medicine, Engineering, Fine Arts) may use this score just as a minimum threshold before interviews, portfolios, or secondary selection. Meeting the score <strong>does not always guarantee you will get in</strong>. Check directly with the university.
+    </div>
+
+    <section class="row bottomSplit" id="exportContentArea">
+      <div class="panel warningPanel">
+        <h2>Warnings & Suggestions</h2>
+        <div id="warningList">
+          <p class="noWarningsPlaceholder">Looking good! No missing requirements right now.</p>
+        </div>
       </div>
-    </div>
 
-    <div class="panel goalsPanel">
-      <h2>Uni Goals</h2>
-      <div class="goalControls">
-        <select id="universitySelect"></select>
-        <select id="degreeSelect"></select>
-        <button id="addGoalBtn" class="primaryBtn">Add Goal</button>
+      <div class="panel goalsPanel">
+        <h2>Your Uni Goals</h2>
+        <div class="goalControls hide-on-print">
+          <select id="universitySelect"></select>
+          <select id="degreeSelect"></select>
+          <button id="addGoalBtn" class="primaryBtn">Add Goal</button>
+        </div>
+        <div id="goalList"></div>
       </div>
-      <div id="goalList"></div>
-    </div>
-  </section>
+    </section>
 
-  <section id="pathwaySection" class="row targetPathway">
-    <div class="panel fullWidthPanel">
-      <h2>Target Pathway Planner</h2>
-      <p style="color: var(--text-muted); font-size: 14px; margin-top: -10px; margin-bottom: 20px;">Type in your target rank score to see the easiest ways to hit it.</p>
+    <section class="row panel">
+      <h2>Compare Degrees</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-top: -10px; margin-bottom: 20px;">Toss up between two different university courses side-by-side.</p>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div style="flex:1;">
+          <h3 style="margin-top:0;">Course A</h3>
+          <select id="compUniA" style="margin-bottom: 10px;"></select>
+          <select id="compDegA"></select>
+        </div>
+        <div style="flex:1;">
+          <h3 style="margin-top:0;">Course B</h3>
+          <select id="compUniB" style="margin-bottom: 10px;"></select>
+          <select id="compDegB"></select>
+        </div>
+      </div>
+      <button id="runCompareBtn" class="primaryBtn">Compare Side-by-Side</button>
       
-      <div class="goalControls">
-        <input type="number" id="targetScoreInput" placeholder="Enter target score (e.g. 250)" min="1" max="320">
-        <button id="calcPathwaysBtn" class="primaryBtn">Find Pathways</button>
+      <div id="compareResults" style="margin-top: 25px; display: none;">
+        <table class="compareTable">
+          <tr>
+            <th>Feature</th>
+            <th id="compTitleA">Course A</th>
+            <th id="compTitleB">Course B</th>
+          </tr>
+          <tr>
+            <td><strong>Guaranteed Rank Score</strong></td>
+            <td id="compRankA"></td>
+            <td id="compRankB"></td>
+          </tr>
+          <tr>
+            <td><strong>Required Subjects</strong></td>
+            <td id="compSubjA"></td>
+            <td id="compSubjB"></td>
+          </tr>
+          <tr>
+            <td><strong>Specific AS Needs</strong></td>
+            <td id="compAsA"></td>
+            <td id="compAsB"></td>
+          </tr>
+          <tr>
+            <td><strong>Link</strong></td>
+            <td id="compLinkA"></td>
+            <td id="compLinkB"></td>
+          </tr>
+        </table>
       </div>
-      
-      <div id="pathwayResultsContainer"></div>
+    </section>
+  </div>
+
+  <div id="tab-matcher" class="tabPane">
+    <div class="instructions">
+      <strong>Degree Matcher:</strong> See every degree across New Zealand that you currently qualify for, or are close to getting into.
     </div>
-  </section>
+    <div style="text-align:center; margin-bottom: 20px;">
+      <button id="runMatcherBtn" class="primaryBtn" style="padding: 15px 30px; font-size: 18px;">🔍 Find My Matches</button>
+    </div>
+    
+    <div id="matcherResultsArea" style="display:none;">
+      <h2 style="color: #10b981; border-bottom: 1px solid #10b981; padding-bottom: 5px;">✅ Degrees You've Met (Guaranteed Entry Score)</h2>
+      <div id="matcherMet" class="pathwayGrid" style="margin-bottom: 30px;"></div>
+
+      <h2 style="color: #f59e0b; border-bottom: 1px solid #f59e0b; padding-bottom: 5px;">⏳ Close (Within 30 points)</h2>
+      <div id="matcherClose" class="pathwayGrid"></div>
+    </div>
+  </div>
+
+  <div id="tab-scholarships" class="tabPane">
+    <div class="instructions">
+      <strong>Scholarship Targets:</strong> Major university scholarships generally require rank scores well above standard UE, alongside community leadership.
+    </div>
+    <section class="row panel">
+      <h2 style="margin-top:0; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Major Entrance Scholarships</h2>
+      <div id="scholarshipsContainer" class="pathwayGrid"></div>
+    </section>
+  </div>
+
+  <div id="tab-mock" class="tabPane">
+    <div class="instructions">
+      <strong>Mock Exam Survival:</strong> Lock in your secured internal credits, and see how many external Excellence/Merit/Achieved credits you need to reach a specific target.
+    </div>
+    <section class="row panel">
+      <h2>Mock Exam Calculator</h2>
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+        <div class="inputGroup" style="flex:1;">
+          <label>Current Secured Rank Score (from Internals)</label>
+          <input type="number" id="mockSecuredScore" value="0" readonly style="background: rgba(0,0,0,0.4); cursor: not-allowed;">
+          <p style="font-size: 12px; color: var(--text-muted);">Auto-pulled from Calculator tab.</p>
+        </div>
+        <div class="inputGroup" style="flex:1;">
+          <label>Target Rank Score</label>
+          <input type="number" id="mockTargetScore" value="250">
+        </div>
+      </div>
+      <button id="calcMockBtn" class="primaryBtn">Calculate Required Externals</button>
+      
+      <div id="mockResultsContainer" style="margin-top: 20px;"></div>
+    </section>
+  </div>
 
 </main>
 
 <footer class="app-footer">
-  <p><strong>Note:</strong> This is just a guide to help you plan. Always double-check your actual requirements directly with the uni.</p>
+  <p><strong>Crucial Disclaimer:</strong> This planner is an unofficial guide. Meeting a rank score does not legally guarantee entry if programs have secondary selections (portfolios, interviews, limits). Always verify directly with your university.</p>
   <p>Built by Oscar Ellis</p>
 </footer>
 
