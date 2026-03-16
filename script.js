@@ -1,243 +1,616 @@
-:root {
-  --bg-main: #0f172a;
-  --bg-panel: #1e293b;
-  --border-color: rgba(255, 255, 255, 0.15);
-  --accent-primary: #6366f1;
-  --accent-hover: #4f46e5;
-  --text-main: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.6);
-}
+// --- STATE MANAGEMENT ---
+let appState = {
+  currentProfile: "default",
+  profiles: {
+    "default": { name: "My Profile", useSpecific: false, ovE: 0, ovM: 0, ovA: 0, subjects: [], ue: {}, checks: {}, goals: [] }
+  },
+  themeData: { themeClass: "theme-default", customP: "#6366f1", customB: "#0f172a", customPan: "#1e293b" },
+  activeTab: "tab-calculator",
+  targetScore: ""
+};
 
-body.theme-ocean { --bg-main: #082f49; --bg-panel: #0c4a6e; --accent-primary: #0ea5e9; --accent-hover: #0284c7; }
-body.theme-forest { --bg-main: #022c22; --bg-panel: #064e3b; --accent-primary: #10b981; --accent-hover: #059669; }
-body.theme-sunset { --bg-main: #2e1065; --bg-panel: #4c1d95; --accent-primary: #8b5cf6; --accent-hover: #7c3aed; }
+let rankScore = 0;
+let totalE = 0, totalM = 0, totalA = 0;
+let creditsChartInstance = null;
 
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0; font-family: 'Inter', sans-serif;
-  background: var(--bg-main); color: var(--text-main);
-  -webkit-tap-highlight-color: transparent; transition: background-color 0.4s ease;
-}
+// --- ACCURATE 2025/2026 UNIVERSITY DATABASE ---
+// Requirements triple-checked. 140-150 points represents the standard UE preferential baseline.
+const universities = {
+  "University of Auckland": {
+    "Engineering (Hons)": { rank: 260, req: ["Calculus", "Physics"], reqStandards: ["AS91578 (Differentiation)", "AS91579 (Integration)"], note: true, link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-engineering-honours-behons.html" },
+    "Biomedical Science": { rank: 280, req: ["Chemistry", "Physics"], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-science-bsc.html" },
+    "Health Sciences": { rank: 250, req: ["Biology", "Chemistry"], reqStandards: ["One other subject strongly recommended"], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-health-sciences-bhsc.html" },
+    "Architecture": { rank: 230, req: [], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-architectural-studies-bas.html" },
+    "Commerce / Business": { rank: 210, req: [], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-commerce-bcom.html" },
+    "Property": { rank: 230, req: [], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-property-bprop.html" },
+    "Computer Science (BSc)": { rank: 165, req: [], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-science-bsc.html" },
+    "Science (BSc - General)": { rank: 165, req: [], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-science-bsc.html" },
+    "Arts (BA)": { rank: 150, req: [], reqStandards: [], link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-arts-ba.html" },
+    "Law (Part I)": { rank: 165, req: [], reqStandards: [], note: "Entry to Part II requires high GPA during Part I.", link: "https://www.auckland.ac.nz/en/study/study-options/find-a-study-option/bachelor-of-laws-llb.html" }
+  },
+  "University of Otago": {
+    "Health Sci First Year (HSFY)": { rank: 140, req: [], reqStandards: [], note: "HSFY Preferential Entry is 140. Highly competitive progression to Med/Dentistry.", link: "https://www.otago.ac.nz/study/hsfy" },
+    "Law (First Year)": { rank: 140, req: [], reqStandards: [], link: "https://www.otago.ac.nz/law/study" },
+    "Commerce": { rank: 140, req: [], reqStandards: [], link: "https://www.otago.ac.nz/business/study" },
+    "Science (BSc)": { rank: 140, req: [], reqStandards: [], link: "https://www.otago.ac.nz/sciences/study" },
+    "Arts (BA)": { rank: 140, req: [], reqStandards: [], link: "https://www.otago.ac.nz/arts/study" },
+    "Surveying": { rank: 140, req: [], reqStandards: [], link: "https://www.otago.ac.nz/surveying/study" }
+  },
+  "University of Canterbury": {
+    "Engineering (First Year)": { rank: 250, req: ["Calculus", "Physics"], reqStandards: ["AS91578 (Differentiation)", "AS91579 (Integration)", "14 Credits Physics"], note: true, link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-engineering-with-honours" },
+    "Computer Science": { rank: 150, req: [], reqStandards: [], link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-science/computer-science" },
+    "Product Design": { rank: 150, req: [], reqStandards: [], link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-product-design" },
+    "Law": { rank: 150, req: [], reqStandards: [], link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-laws" },
+    "Commerce": { rank: 150, req: [], reqStandards: [], link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-commerce" },
+    "Science (BSc)": { rank: 150, req: [], reqStandards: [], link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-science" },
+    "Forestry Science": { rank: 150, req: [], reqStandards: [], link: "https://www.canterbury.ac.nz/study/qualifications-and-courses/bachelor-of-forestry-science" }
+  },
+  "Victoria University of Wellington": {
+    "Engineering (First Year)": { rank: 170, req: ["Calculus", "Physics"], reqStandards: [], note: true, link: "https://www.wgtn.ac.nz/explore/degrees/bachelor-of-engineering-with-honours" },
+    "Architectural Studies": { rank: 170, req: [], reqStandards: [], link: "https://www.wgtn.ac.nz/explore/degrees/bachelor-of-architectural-studies" },
+    "Law (First Year)": { rank: 150, req: [], reqStandards: [], link: "https://www.wgtn.ac.nz/explore/degrees/bachelor-of-laws" },
+    "Commerce": { rank: 150, req: [], reqStandards: [], link: "https://www.wgtn.ac.nz/explore/degrees/bachelor-of-commerce" },
+    "Science (BSc)": { rank: 150, req: [], reqStandards: [], link: "https://www.wgtn.ac.nz/explore/degrees/bachelor-of-science" },
+    "Arts (BA)": { rank: 150, req: [], reqStandards: [], link: "https://www.wgtn.ac.nz/explore/degrees/bachelor-of-arts" }
+  },
+  "AUT (Auckland University of Technology)": {
+    "Engineering (Hons)": { rank: 250, req: ["Calculus", "Physics"], reqStandards: [], link: "https://www.aut.ac.nz/study/study-options/engineering-computer-and-mathematical-sciences/courses/bachelor-of-engineering-honours" },
+    "Law": { rank: 220, req: [], reqStandards: [], link: "https://www.aut.ac.nz/study/study-options/law/courses/bachelor-of-laws" },
+    "Computer & Info Sci": { rank: 150, req: [], reqStandards: [], link: "https://www.aut.ac.nz/study/study-options/engineering-computer-and-mathematical-sciences/courses/bachelor-of-computer-and-information-sciences" },
+    "Business": { rank: 150, req: [], reqStandards: [], link: "https://www.aut.ac.nz/study/study-options/business/courses/bachelor-of-business" },
+    "Nursing": { rank: 150, req: [], reqStandards: [], link: "https://www.aut.ac.nz/study/study-options/health-sciences/courses/bachelor-of-health-science-nursing" }
+  },
+  "University of Waikato": {
+    "Engineering (Hons)": { rank: 150, req: ["Calculus", "Physics"], reqStandards: [], link: "https://www.waikato.ac.nz/study/qualifications/bachelor-of-engineering-with-honours" },
+    "Computer Science": { rank: 150, req: [], reqStandards: [], link: "https://www.waikato.ac.nz/study/qualifications/bachelor-of-science" },
+    "Management": { rank: 150, req: [], reqStandards: [], link: "https://www.waikato.ac.nz/study/qualifications/bachelor-of-management-studies" },
+    "Law": { rank: 150, req: [], reqStandards: [], link: "https://www.waikato.ac.nz/study/qualifications/bachelor-of-laws" }
+  },
+  "Massey University": {
+    "Vet Science (Pre-select)": { rank: 150, req: ["Chemistry", "Physics", "Biology"], reqStandards: [], link: "https://www.massey.ac.nz/study/all-qualifications-and-degrees/bachelor-of-veterinary-science-BVTSC/" },
+    "Engineering (Hons)": { rank: 150, req: ["Calculus", "Physics"], reqStandards: [], link: "https://www.massey.ac.nz/study/all-qualifications-and-degrees/bachelor-of-engineering-with-honours-BEHNR/" },
+    "Aviation": { rank: 150, req: [], reqStandards: [], link: "https://www.massey.ac.nz/study/all-qualifications-and-degrees/bachelor-of-aviation-BAVTN/" },
+    "Nursing": { rank: 150, req: [], reqStandards: [], link: "https://www.massey.ac.nz/study/all-qualifications-and-degrees/bachelor-of-nursing-BNURS/" }
+  },
+  "Lincoln University": {
+    "Agricultural Science": { rank: 150, req: [], reqStandards: [], link: "https://www.lincoln.ac.nz/study/study-programmes/programme-search/bachelor-of-agricultural-science/" },
+    "Landscape Architecture": { rank: 150, req: [], reqStandards: [], link: "https://www.lincoln.ac.nz/study/study-programmes/programme-search/bachelor-of-landscape-architecture/" },
+    "Commerce": { rank: 150, req: [], reqStandards: [], link: "https://www.lincoln.ac.nz/study/study-programmes/programme-search/bachelor-of-commerce-agriculture/" }
+  }
+};
 
-header { padding: 30px 20px 10px; max-width: 1200px; margin: 0 auto; }
-.header-content { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px; }
-.header-titles h1 { font-family: 'Space Grotesk', sans-serif; font-size: 32px; margin: 0 0 5px 0; }
-.header-titles p { font-size: 15px; color: var(--text-muted); margin: 0; }
-.header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;}
+const topScholarships = [
+  { name: "UoA Top Achiever", uni: "University of Auckland", value: "$20,000", target: 280, desc: "Highly competitive. Usually requires 280+ rank score and strong leadership/community involvement." },
+  { name: "Otago Academic Excellence", uni: "University of Otago", value: "$30,000+", target: 270, desc: "For students demonstrating outstanding academic capability across multiple subjects." },
+  { name: "Otago Vice-Chancellor's", uni: "University of Otago", value: "$10,000", target: 260, desc: "Rewards strong academic achievement." },
+  { name: "Canterbury Hiranga", uni: "University of Canterbury", value: "$5,000", target: 260, desc: "Awarded to top academic students entering their first year." },
+  { name: "Wellington Tangiwai", uni: "Victoria University", value: "$5,000", target: 240, desc: "School leaver scholarship celebrating academic excellence." },
+  { name: "Wellington Kahurangi", uni: "Victoria University", value: "$30,000", target: 280, desc: "Exceptional academic merit and leadership." },
+  { name: "Waikato Sir Edmund Hillary", uni: "University of Waikato", value: "$10,000", target: 240, desc: "For students excelling in academia, sports, or creative arts." },
+  { name: "AUT Vice-Chancellor's", uni: "AUT", value: "$20,000", target: 260, desc: "Significant financial contribution for top academic achievers." },
+  { name: "Massey Vice-Chancellor's", uni: "Massey University", value: "$21,000", target: 250, desc: "For outstanding academic and leadership achievements." }
+];
 
-.profileSelect {
-  background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main);
-  font-size: 14px; font-weight: 600; padding: 10px; border-radius: 8px; cursor: pointer; width: 140px;
-}
-.iconBtn {
-  background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--text-main);
-  font-size: 14px; font-weight: 600; padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s;
-}
-.iconBtn:hover { background: rgba(255, 255, 255, 0.1); }
-.resetBtn { color: var(--text-muted); }
-.resetBtn:hover { background: #7f1d1d; color: white; border-color: #ef4444; }
+// --- DOM ELEMENTS ---
+const excellenceEl = document.getElementById("excellence");
+const meritEl = document.getElementById("merit");
+const achievedEl = document.getElementById("achieved");
+const modeToggle = document.getElementById("modeToggle");
+const overallCreditsSection = document.getElementById("overallCreditsSection");
+const specificSubjectsSection = document.getElementById("specificSubjectsSection");
 
-/* --- TABS NAVIGATION --- */
-.tabNav { display: flex; gap: 10px; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; overflow-x: auto; padding-bottom: 5px;}
-.tabBtn {
-  background: none; border: none; color: var(--text-muted); font-size: 16px; font-weight: 500;
-  padding: 12px 20px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s ease; white-space: nowrap;
-}
-.tabBtn:hover { color: var(--text-main); }
-.tabBtn.active { color: white; border-bottom: 3px solid white; font-weight: 600; }
+const rankScoreEl = document.getElementById("rankScore");
+const ueReading = document.getElementById("ueReading");
+const ueWriting = document.getElementById("ueWriting");
+const ueNumeracy = document.getElementById("ueNumeracy");
+const ueLitCard = document.getElementById("ueLitCard");
+const ueNumCard = document.getElementById("ueNumCard");
 
-.tabPane { display: none; animation: fadeIn 0.4s ease; }
-.tabPane.active { display: block; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+const universitySelect = document.getElementById("universitySelect");
+const degreeSelect = document.getElementById("degreeSelect");
+const goalList = document.getElementById("goalList");
+const warningList = document.getElementById("warningList");
+const subjectsContainer = document.getElementById("subjectsContainer");
+const addSubjectBtn = document.getElementById("addSubjectBtn");
+const subChecks = ["subCalc", "subPhysics", "subChem", "subBio", "subStats"].map(id => document.getElementById(id));
 
-.instructions {
-  background: rgba(255, 255, 255, 0.05); border-left: 4px solid var(--accent-primary);
-  padding: 15px 20px; border-radius: 0 8px 8px 0; margin-bottom: 25px; font-size: 15px; color: var(--text-muted); line-height: 1.5;
-}
-.instructions strong { color: var(--text-main); }
+const profileSelect = document.getElementById("profileSelect");
+const addProfileBtn = document.getElementById("addProfileBtn");
+const resetBtn = document.getElementById("resetBtn");
+const targetScoreInput = document.getElementById("targetScoreInput");
+const calcPathwaysBtn = document.getElementById("calcPathwaysBtn");
+const exportPdfBtn = document.getElementById("exportPdfBtn");
+const shareIgBtn = document.getElementById("shareIgBtn");
 
-/* --- TOGGLE SWITCH --- */
-.toggle-container { display: flex; align-items: center; }
-.switch { position: relative; display: inline-block; width: 46px; height: 24px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.2); transition: .4s; border-radius: 24px; }
-.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-input:checked + .slider { background-color: var(--accent-primary); }
-input:checked + .slider:before { transform: translateX(22px); }
+const tabBtns = document.querySelectorAll(".tabBtn");
+const tabPanes = document.querySelectorAll(".tabPane");
 
-/* --- SUBJECT ROWS --- */
-.subjects-container { display: flex; flex-direction: column; gap: 15px; }
-.subject-row {
-  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
-  background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);
-}
-.subject-row input[type="text"] { flex: 2; min-width: 120px; }
-.subject-row .inputGroup { flex: 1; min-width: 60px; margin:0;}
-.subject-row .inputGroup label { font-size: 11px; margin-bottom: 4px; }
-.remove-subj-btn { background: #7f1d1d; color: white; border: none; border-radius: 6px; padding: 10px; cursor: pointer; font-weight:bold;}
-.remove-subj-btn:hover { background: #dc2626;}
+const openThemeBtn = document.getElementById("openThemeBtn");
+const themeModal = document.getElementById("themeModal");
+const closeThemeBtn = document.getElementById("closeThemeBtn");
+const themeSwatches = document.querySelectorAll(".themeSwatch");
+const primaryColorPicker = document.getElementById("primaryColor");
+const bgColorPicker = document.getElementById("bgColor");
 
-/* --- FLOATING STATS BUTTON --- */
-.floatingStatsBtn {
-  position: fixed; bottom: 30px; right: 30px; background: var(--accent-primary);
-  color: white; border: none; padding: 15px 20px; border-radius: 50px;
-  font-weight: bold; font-size: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-  cursor: pointer; z-index: 999; display: flex; align-items: center; gap: 8px;
-  transition: transform 0.2s, background 0.2s;
-}
-.floatingStatsBtn:hover { transform: scale(1.05); background: var(--accent-hover); }
+const openStatsBtn = document.getElementById("openStatsBtn");
+const statsModal = document.getElementById("statsModal");
+const closeStatsBtn = document.getElementById("closeStatsBtn");
 
-/* --- SHARE CARD (HIDDEN) --- */
-.shareCardHidden {
-  position: absolute; top: -9999px; left: -9999px; width: 400px; height: 400px;
-  background: linear-gradient(135deg, var(--bg-panel), var(--bg-main));
-  color: white; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  text-align: center; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-  border: 4px solid var(--border-color); z-index: -1;
-}
-
-/* --- COMPARE TABLE --- */
-.compareTable { width: 100%; border-collapse: collapse; margin-top: 15px; }
-.compareTable th, .compareTable td { border: 1px solid var(--border-color); padding: 15px; text-align: left; }
-.compareTable th { background: rgba(0,0,0,0.2); font-family: 'Space Grotesk', sans-serif; font-size: 18px; }
-.compareTable td strong { color: var(--text-muted); font-size: 14px; }
-
-/* --- MODALS --- */
-.modalOverlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
-  opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;
-}
-.modalOverlay.active { opacity: 1; pointer-events: all; }
-.modalContent {
-  background: var(--bg-panel); padding: 30px; border-radius: 16px; width: 100%; max-width: 400px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(20px); transition: transform 0.3s ease;
-  max-height: 90vh; overflow-y: auto;
-}
-.statsModalContent { max-width: 700px; }
-.modalOverlay.active .modalContent { transform: translateY(0); }
-
-.themeGrid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 15px; }
-.themeSwatch { height: 40px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; transition: transform 0.2s; }
-.themeSwatch:hover { transform: scale(1.05); }
-
-.customThemeGroup { display: flex; gap: 15px; margin-top: 10px;}
-.colorPickerItem { flex: 1; display: flex; flex-direction: column; gap: 5px; }
-.colorPickerItem label { font-size: 13px; color: var(--text-muted); }
-.colorPickerItem input[type="color"] { width: 100%; height: 40px; border: none; border-radius: 8px; cursor: pointer; background: transparent; padding: 0; }
-.colorPickerItem input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-.colorPickerItem input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-color); border-radius: 8px; }
-
-/* --- PANELS --- */
-.container { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px; }
-.panel { background: var(--bg-panel); border-radius: 16px; padding: 25px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); transition: background-color 0.4s ease; }
-.fullWidthPanel { width: 100%; }
-.row { margin-bottom: 25px; }
-
-.topBar { display: flex; gap: 20px; }
-.statCard {
-  flex: 1; text-align: center; padding: 22px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  transition: background-color 0.4s ease; display: flex; flex-direction: column; justify-content: center;
-}
-.statCard h3 { margin: 0 0 10px 0; font-size: 18px; color: #e2e8f0; }
-.statCard p { font-size: 42px; font-weight: 600; margin: 0; color: white;}
-
-.middleBar { display: flex; justify-content: space-between; gap: 30px; }
-.inputSection { flex: 1; min-width: 200px; }
-.inputSection h3 { margin-top: 0; margin-bottom: 15px; font-size: 18px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-
-.creditRow { display: flex; gap: 15px; }
-.inputGroup { flex: 1; }
-.inputGroup label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 500; color: var(--text-muted); }
-
-input[type=number], input[type=text], select {
-  width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);
-  background: rgba(0,0,0,0.2); color: var(--text-main); font-size: 15px; transition: all 0.4s ease;
-}
-
-.checkboxGrid { display: flex; flex-direction: column; gap: 10px; }
-.checkItem {
-  display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.03);
-  padding: 10px 14px; border-radius: 8px; cursor: pointer; transition: background 0.2s; font-size: 15px;
-}
-.checkItem:hover { background: rgba(255,255,255,0.08); }
-
-.bottomSplit { display: grid; grid-template-columns: 1fr 2fr; gap: 25px; }
-.warningPanel h2, .goalsPanel h2, .fullWidthPanel h2 { margin-top: 0; font-size: 20px; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-
-.goalControls { display: flex; gap: 15px; margin-bottom: 25px; }
-.warningCard { background: #7f1d1d; color: #fca5a5; padding: 14px; border-radius: 10px; margin-bottom: 10px; font-size: 14px; line-height: 1.4; }
-.warningCard.medium { background: #9a3412; color: #fdba74; }
-.noWarningsPlaceholder { color: var(--text-muted); font-style: italic; font-size: 14px; }
-
-.goalCard {
-  padding: 20px; border-radius: 12px; margin-bottom: 16px; 
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25); position: relative; color: white;
-}
-.goalHeader { margin-bottom: 15px; padding-right: 80px; }
-.goal-uni { font-size: 13px; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 4px 0; }
-.goal-deg { font-size: 20px; font-weight: 700; font-family: 'Space Grotesk', sans-serif; margin: 0; }
-.goalDetails p { margin: 6px 0; font-size: 14px; color: rgba(255,255,255,0.9); }
-.missing-text { color: #fca5a5 !important; font-weight: 600; }
-.bg-orange .missing-text { color: #fed7aa !important; }
-
-.infoLink { display: inline-block; background: rgba(255,255,255,0.15); color: white; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; transition: background 0.2s; margin-top: 10px; }
-.infoLink:hover { background: rgba(255,255,255,0.3); }
-.removeBtn { position: absolute; top: 15px; right: 15px; background: rgba(0,0,0,0.3); border: none; color: white; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-
-.progressBar { height: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; margin: 15px 0 5px; overflow: hidden; }
-.progressFill { height: 100%; background: rgba(255,255,255,0.8); width: 0; transition: width 0.5s ease; }
-
-.pathwayGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;}
-.pathwayCard { background: rgba(0,0,0,0.2); padding: 22px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: background 0.4s ease, border 0.4s ease; position: relative;}
-.pathwayCard h3 { margin-top: 0; margin-bottom: 5px; color: var(--text-main); font-size: 18px; }
-.pathwayCard ul { list-style: none; padding: 0; margin: 15px 0 0 0; }
-.pathwayCard li { margin-bottom: 8px; font-size: 15px; display: flex; justify-content: space-between; }
-.pathwayCard .total { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-weight: 600; }
-
-.scholarBadge { position: absolute; top: 15px; right: 15px; background: #10b981; color: white; font-weight: bold; padding: 4px 10px; border-radius: 6px; font-size: 13px; }
-
-.primaryBtn { background: var(--accent-primary); border: none; padding: 12px 24px; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 15px; white-space: nowrap; }
-.primaryBtn:hover { filter: brightness(1.1); transform: translateY(-2px); }
-.secondaryBtn { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); padding: 12px 24px; border-radius: 8px; color: var(--text-muted); font-weight: 500; cursor: pointer; transition: all 0.2s; font-size: 14px; }
-.secondaryBtn:hover { background: rgba(255, 255, 255, 0.1); color: white; }
-
-.bg-green { background-color: #166534 !important; }
-.bg-orange { background-color: #9a3412 !important; }
-.bg-red { background-color: #7f1d1d !important; }
-.bg-default { background-color: var(--bg-panel) !important; }
-
-.text-green { color: #10b981; font-weight: bold; }
-.text-blue { color: #3b82f6; font-weight: bold; }
-
-.app-footer { text-align: center; padding: 20px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 13px; line-height: 1.5; transition: border-color 0.4s ease;}
-.app-footer p { margin: 5px 0; }
-
-@media print {
-  .hide-on-print { display: none !important; }
-  body { background: white !important; color: black !important; }
-  .panel { box-shadow: none; border: 1px solid #ccc; background: white !important;}
-  .goalCard { background: white !important; color: black !important; border: 2px solid #ccc; page-break-inside: avoid;}
-  .missing-text { color: red !important; }
-  .goal-uni, .goalDetails p, .goal-deg { color: black !important; }
-}
-
-@media(max-width: 900px) {
-  .bottomSplit { grid-template-columns: 1fr; }
-  .middleBar { flex-wrap: wrap; }
-  .inputSection { flex: 1 1 100%; }
-}
-@media(max-width: 650px) {
-  header h1 { font-size: 24px; }
-  .header-content { flex-direction: column; text-align: left; }
-  .header-actions { width: 100%; justify-content: space-between; }
-  .hideMobile { display: none; }
-  .topBar { flex-direction: column; }
-  .middleBar { flex-direction: column; gap: 20px; }
-  .goalControls { flex-direction: column; }
-  .pathwayGrid { grid-template-columns: 1fr; }
-  .subject-row input[type="text"] { width: 100%; }
+// --- INITIALIZATION ---
+window.onload = () => {
+  populateUniversities();
+  populateCompareDropdowns();
+  loadData();
   
-  .floatingStatsBtn { bottom: 20px; right: 20px; padding: 12px; }
-  .floatingStatsBtn .btnText { display: none; }
+  [excellenceEl, meritEl, achievedEl].forEach(el => el.addEventListener("input", triggerSaveAndCalc));
+  addSubjectBtn.addEventListener("click", () => addSubjectRow());
+  [ueReading, ueWriting, ueNumeracy, ...subChecks].forEach(el => el.addEventListener("change", triggerSaveAndCalc));
+  
+  modeToggle.addEventListener("change", handleModeToggle);
+  document.getElementById("addGoalBtn").addEventListener("click", addGoal);
+  resetBtn.addEventListener("click", handleReset);
+  calcPathwaysBtn.addEventListener("click", generatePathways);
+  
+  profileSelect.addEventListener("change", handleProfileSwitch);
+  addProfileBtn.addEventListener("click", createProfile);
+  exportPdfBtn.addEventListener("click", exportToPDF);
+  shareIgBtn.addEventListener("click", exportToIG);
+  
+  document.getElementById("runMatcherBtn").addEventListener("click", runDegreeMatcher);
+  document.getElementById("runCompareBtn").addEventListener("click", runCompare);
+  document.getElementById("calcMockBtn").addEventListener("click", calculateMock);
+  
+  setupUI();
+  handleModeToggle(false);
+};
+
+// --- TOGGLE & CORE CALC ---
+function handleModeToggle(save = true) {
+  if(modeToggle.checked) {
+    overallCreditsSection.style.display = "none";
+    specificSubjectsSection.style.display = "block";
+  } else {
+    overallCreditsSection.style.display = "block";
+    specificSubjectsSection.style.display = "none";
+  }
+  if(save) triggerSaveAndCalc();
+}
+
+function addSubjectRow(name = "", e = 0, m = 0, a = 0) {
+  const row = document.createElement("div");
+  row.className = "subject-row";
+  row.innerHTML = `
+    <input type="text" class="subj-name" placeholder="Subject Name" value="${name}">
+    <div class="inputGroup"><label>E</label><input type="number" class="subj-e" min="0" value="${e}"></div>
+    <div class="inputGroup"><label>M</label><input type="number" class="subj-m" min="0" value="${m}"></div>
+    <div class="inputGroup"><label>A</label><input type="number" class="subj-a" min="0" value="${a}"></div>
+    <button class="remove-subj-btn" title="Remove">✕</button>
+  `;
+  
+  // Auto-check global prerequisites if a specific name is typed
+  row.querySelector(".subj-name").addEventListener("input", (ev) => {
+      const val = ev.target.value.toLowerCase();
+      if(val.includes("calculus")) document.getElementById("subCalc").checked = true;
+      if(val.includes("physics")) document.getElementById("subPhysics").checked = true;
+      if(val.includes("chemistry")) document.getElementById("subChem").checked = true;
+      if(val.includes("biology")) document.getElementById("subBio").checked = true;
+      if(val.includes("statistics")) document.getElementById("subStats").checked = true;
+      triggerSaveAndCalc();
+  });
+
+  row.querySelectorAll("input").forEach(inp => inp.addEventListener("input", triggerSaveAndCalc));
+  row.querySelector(".remove-subj-btn").addEventListener("click", () => {
+    row.remove(); triggerSaveAndCalc();
+  });
+  subjectsContainer.appendChild(row);
+  triggerSaveAndCalc();
+}
+
+function triggerSaveAndCalc() {
+  calculate();
+  saveData();
+}
+
+function calculate() {
+  totalE = 0; totalM = 0; totalA = 0;
+  let subjEndorsements = [];
+  
+  if (modeToggle.checked) {
+    document.querySelectorAll(".subject-row").forEach(row => {
+      let n = row.querySelector(".subj-name").value || "Unnamed Subject";
+      let e = parseInt(row.querySelector(".subj-e").value) || 0;
+      let m = parseInt(row.querySelector(".subj-m").value) || 0;
+      let a = parseInt(row.querySelector(".subj-a").value) || 0;
+      totalE += e; totalM += m; totalA += a;
+      
+      if (e >= 14) subjEndorsements.push(`<li>${n}: <span class="text-green">Excellence</span></li>`);
+      else if (e + m >= 14) subjEndorsements.push(`<li>${n}: <span class="text-blue">Merit</span></li>`);
+    });
+  } else {
+    totalE = parseInt(excellenceEl.value) || 0;
+    totalM = parseInt(meritEl.value) || 0;
+    totalA = parseInt(achievedEl.value) || 0;
+  }
+
+  document.getElementById("totalEText").innerText = totalE;
+  document.getElementById("totalMText").innerText = totalM;
+  document.getElementById("totalAText").innerText = totalA;
+  document.getElementById("totalCreditsText").innerText = totalE + totalM + totalA;
+
+  let eEndorsePct = Math.min((totalE/50)*100, 100);
+  let mEndorsePct = Math.min(((totalE+totalM)/50)*100, 100);
+  document.getElementById("endorseEBar").style.width = `${eEndorsePct}%`;
+  document.getElementById("endorseEText").innerText = `${totalE}/50`;
+  document.getElementById("endorseMBar").style.width = `${mEndorsePct}%`;
+  document.getElementById("endorseMText").innerText = `${totalE+totalM}/50`;
+
+  const subjList = document.getElementById("subjectEndorsementsList");
+  if(modeToggle.checked && subjEndorsements.length > 0) {
+    subjList.innerHTML = subjEndorsements.join("");
+  } else {
+    subjList.innerHTML = `<li style="color: var(--text-muted);">Switch to 'Specific Subjects' to track subject endorsements.</li>`;
+  }
+
+  let remaining = 80;
+  let useE = Math.min(totalE, remaining); remaining -= useE;
+  let useM = Math.min(totalM, remaining); remaining -= useM;
+  let useA = Math.min(totalA, remaining);
+  
+  rankScore = (useE * 4) + (useM * 3) + (useA * 2);
+  rankScore = Math.min(rankScore, 320);
+  rankScoreEl.innerText = rankScore;
+  document.getElementById("mockSecuredScore").value = rankScore; 
+  
+  updateUE(); updateGoals(); updateWarnings(); updateScholarships();
+  try { updateChart(); } catch(e) { console.log("Chart.js failed gracefully."); }
+}
+
+// --- SHARE TO SOCIALS ---
+function exportToIG() {
+  if (typeof html2canvas === 'undefined') { alert("Module loading. Please try again in a second."); return; }
+  
+  const shareCard = document.getElementById("shareCard");
+  const hasUE = (ueReading.checked && ueWriting.checked && ueNumeracy.checked);
+  document.getElementById("shareScore").innerText = rankScore;
+  document.getElementById("shareUE").innerText = hasUE ? "✅ UE Achieved" : "❌ UE Pending";
+  
+  shareCard.style.top = "0"; shareCard.style.left = "-9999px"; shareCard.style.zIndex = "1";
+  
+  html2canvas(shareCard, { scale: 2, backgroundColor: null }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = 'NCEA_Rank_Score.png';
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    shareCard.style.top = "-9999px"; shareCard.style.zIndex = "-1";
+  });
+}
+
+// --- CHARTS & PDF ---
+function updateChart() {
+  if (typeof Chart === 'undefined') return;
+  const ctx = document.getElementById('creditsChart').getContext('2d');
+  if(creditsChartInstance) {
+    creditsChartInstance.data.datasets[0].data = [totalE, totalM, totalA];
+    creditsChartInstance.update(); return;
+  }
+  creditsChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: ['Excellence', 'Merit', 'Achieved'], datasets: [{ data: [totalE, totalM, totalA], backgroundColor: ['#10b981', '#3b82f6', '#f59e0b'], borderWidth: 0 }] },
+    options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#fff' } } } }
+  });
+}
+
+function exportToPDF() {
+  if (typeof html2pdf === 'undefined') { alert("PDF Module Loading."); return; }
+  const element = document.getElementById('exportContentArea');
+  const opt = { margin: 0.5, filename: `NCEA_Planner_${appState.currentProfile}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
+  
+  document.querySelectorAll(".goalCard").forEach(c => { c.style.backgroundColor = "white"; c.style.color = "black"; c.style.border = "1px solid #ccc"; });
+  html2pdf().set(opt).from(element).save().then(() => { triggerSaveAndCalc(); });
+}
+
+// --- DATA SAVING & LOADING ---
+function handleProfileSwitch() { appState.currentProfile = profileSelect.value; applyProfileData(); saveData(); }
+function createProfile() {
+  const name = prompt("Enter new profile name:");
+  if(name && !appState.profiles[name]) {
+    appState.profiles[name] = { name: name, useSpecific: false, ovE: 0, ovM: 0, ovA: 0, subjects: [], ue: {}, checks: {}, goals: [] };
+    appState.currentProfile = name; updateProfileDropdown(); applyProfileData(); saveData();
+  }
+}
+function updateProfileDropdown() {
+  profileSelect.innerHTML = "";
+  Object.keys(appState.profiles).forEach(key => {
+    let opt = document.createElement("option"); opt.value = key; opt.innerText = appState.profiles[key].name;
+    if(key === appState.currentProfile) opt.selected = true;
+    profileSelect.appendChild(opt);
+  });
+}
+
+function saveData() {
+  appState.themeData.themeClass = document.body.className;
+  appState.themeData.customP = document.documentElement.style.getPropertyValue('--accent-primary');
+  appState.themeData.customB = document.documentElement.style.getPropertyValue('--bg-main');
+  appState.themeData.customPan = document.documentElement.style.getPropertyValue('--bg-panel');
+  const activeTabBtn = document.querySelector(".tabBtn.active");
+  if(activeTabBtn) appState.activeTab = activeTabBtn.getAttribute("data-tab");
+  appState.targetScore = targetScoreInput.value;
+
+  const prof = appState.profiles[appState.currentProfile];
+  prof.useSpecific = modeToggle.checked;
+  prof.ovE = excellenceEl.value; prof.ovM = meritEl.value; prof.ovA = achievedEl.value;
+  prof.subjects = [];
+  document.querySelectorAll(".subject-row").forEach(row => {
+    prof.subjects.push({ name: row.querySelector(".subj-name").value, e: row.querySelector(".subj-e").value, m: row.querySelector(".subj-m").value, a: row.querySelector(".subj-a").value });
+  });
+  prof.ue = { r: ueReading.checked, w: ueWriting.checked, n: ueNumeracy.checked };
+  prof.checks = {};
+  subChecks.forEach(el => prof.checks[el.id] = el.checked);
+  localStorage.setItem('nceaRankScoreAppV5', JSON.stringify(appState));
+}
+
+function loadData() {
+  const saved = localStorage.getItem('nceaRankScoreAppV5');
+  if (saved) {
+    appState = JSON.parse(saved);
+    if(!appState.profiles["default"]) appState.profiles["default"] = { name: "My Profile", useSpecific: false, ovE: 0, ovM: 0, ovA: 0, subjects: [], ue: {}, checks: {}, goals: [] };
+  }
+  
+  if(appState.themeData.themeClass) document.body.className = appState.themeData.themeClass;
+  if(appState.themeData.themeClass === "theme-custom") {
+    document.documentElement.style.setProperty('--accent-primary', appState.themeData.customP);
+    document.documentElement.style.setProperty('--bg-main', appState.themeData.customB);
+    document.documentElement.style.setProperty('--bg-panel', appState.themeData.customPan);
+    primaryColorPicker.value = appState.themeData.customP || "#6366f1"; bgColorPicker.value = appState.themeData.customB || "#0f172a";
+  }
+  
+  let targetTab = appState.activeTab;
+  if(targetTab) { const targetBtn = document.querySelector(`[data-tab="${targetTab}"]`); if(targetBtn) targetBtn.click(); }
+  
+  targetScoreInput.value = appState.targetScore || "";
+  updateProfileDropdown(); applyProfileData();
+}
+
+function applyProfileData() {
+  const prof = appState.profiles[appState.currentProfile];
+  modeToggle.checked = prof.useSpecific || false; handleModeToggle(false);
+  excellenceEl.value = prof.ovE || 0; meritEl.value = prof.ovM || 0; achievedEl.value = prof.ovA || 0;
+  subjectsContainer.innerHTML = "";
+  if (prof.subjects && prof.subjects.length > 0) prof.subjects.forEach(s => addSubjectRow(s.name, s.e, s.m, s.a));
+  else { addSubjectRow(); addSubjectRow(); addSubjectRow(); }
+  if(prof.ue) { ueReading.checked = prof.ue.r || false; ueWriting.checked = prof.ue.w || false; ueNumeracy.checked = prof.ue.n || false; }
+  if(prof.checks) subChecks.forEach(el => el.checked = prof.checks[el.id] || false);
+  calculate(); if (appState.targetScore) generatePathways();
+}
+
+// --- UI EVENT LOGIC ---
+function setupUI() {
+  tabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      tabBtns.forEach(b => b.classList.remove("active")); tabPanes.forEach(p => p.classList.remove("active"));
+      btn.classList.add("active"); document.getElementById(btn.getAttribute("data-tab")).classList.add("active"); saveData();
+    });
+  });
+  
+  openThemeBtn.addEventListener("click", () => themeModal.classList.add("active"));
+  closeThemeBtn.addEventListener("click", () => themeModal.classList.remove("active"));
+  themeSwatches.forEach(swatch => {
+    swatch.addEventListener("click", (e) => {
+      document.documentElement.style.removeProperty('--accent-primary'); document.documentElement.style.removeProperty('--bg-main'); document.documentElement.style.removeProperty('--bg-panel');
+      document.body.className = e.target.getAttribute("data-theme"); saveData();
+    });
+  });
+  primaryColorPicker.addEventListener("input", applyCustomTheme); bgColorPicker.addEventListener("input", applyCustomTheme);
+
+  openStatsBtn.addEventListener("click", () => {
+      statsModal.classList.add("active");
+      try { updateChart(); } catch(e){}
+  });
+  closeStatsBtn.addEventListener("click", () => statsModal.classList.remove("active"));
+}
+
+function applyCustomTheme() {
+  document.body.className = "theme-custom";
+  const pColor = primaryColorPicker.value; const bColor = bgColorPicker.value;
+  const panelColor = '#' + bColor.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + 15)).toString(16)).substr(-2));
+  document.documentElement.style.setProperty('--accent-primary', pColor); document.documentElement.style.setProperty('--bg-main', bColor); document.documentElement.style.setProperty('--bg-panel', panelColor);
+  saveData();
+}
+
+function handleReset() { if(confirm("Are you sure you want to clear EVERYTHING?")) { localStorage.removeItem('nceaRankScoreAppV5'); location.reload(); } }
+
+// --- UNIVERSITY LOGIC ---
+function populateUniversities(){
+  universitySelect.innerHTML = "";
+  Object.keys(universities).forEach(uni=>{
+    let option = document.createElement("option"); option.value = uni; option.text = uni; universitySelect.appendChild(option);
+  });
+  universitySelect.addEventListener("change", updateDegrees); updateDegrees();
+}
+function updateDegrees(){
+  const uni = universitySelect.value; degreeSelect.innerHTML = "";
+  Object.keys(universities[uni]).forEach(deg=>{
+    let option = document.createElement("option"); option.value = deg; option.text = deg; degreeSelect.appendChild(option);
+  });
+}
+function updateUE(){
+  ueLitCard.className = (ueReading.checked && ueWriting.checked) ? "statCard bg-green" : "statCard bg-red";
+  ueNumCard.className = ueNumeracy.checked ? "statCard bg-green" : "statCard bg-red";
+}
+function getSubjects(){
+  let s = []; subChecks.forEach(el => { if(el.checked) s.push(el.nextElementSibling.innerText); });
+  if(document.getElementById("subStats").checked || document.getElementById("subCalc").checked) s.push("Mathematics");
+  return s;
+}
+
+function addGoal(){
+  const uni = universitySelect.value; const deg = degreeSelect.value; const data = universities[uni][deg]; const prof = appState.profiles[appState.currentProfile];
+  if(!prof.goals) prof.goals = [];
+  if(prof.goals.find(g => g.uni === uni && g.deg === deg)) return;
+  prof.goals.push({uni: uni, deg: deg, rank: data.rank, req: data.req, reqStandards: data.reqStandards, note: data.note, link: data.link});
+  triggerSaveAndCalc();
+}
+function removeGoal(i){ appState.profiles[appState.currentProfile].goals.splice(i,1); triggerSaveAndCalc(); }
+
+function updateGoals(){
+  goalList.innerHTML = ""; const prof = appState.profiles[appState.currentProfile]; if(!prof.goals) return;
+  const subjects = getSubjects(); const hasUE = (ueReading.checked && ueWriting.checked && ueNumeracy.checked);
+
+  prof.goals.forEach((g,i)=>{
+    const missingSubjects = g.req.filter(r=>!subjects.includes(r));
+    let missingList = [...missingSubjects];
+    if (!hasUE) { if(!ueReading.checked || !ueWriting.checked) missingList.push("UE Literacy"); if(!ueNumeracy.checked) missingList.push("UE Numeracy"); }
+
+    let statusText = ""; let colorClass = "";
+    if (missingList.length > 0) { statusText = "Missing Prerequisites"; colorClass = "bg-red"; }
+    else if (rankScore < g.rank - 20) { statusText = "Score is low right now"; colorClass = "bg-red"; }
+    else if (!hasUE) { statusText = "Missing UE Requirements"; colorClass = "bg-orange"; }
+    else if (rankScore < g.rank) { statusText = "Almost there"; colorClass = "bg-orange"; }
+    else { statusText = "Goal reached!"; colorClass = "bg-green"; }
+    
+    const displayRank = g.rank <= 150 ? g.rank + " (Standard UE)" : g.rank;
+    const percent = Math.min((rankScore/Math.max(g.rank, 140))*100, 100);
+    
+    let missingHtml = missingList.length > 0 ? `<p class="missing-text"><strong>Missing:</strong> ${missingList.join(", ")}</p>` : "";
+    let standardsHtml = (g.reqStandards && g.reqStandards.length > 0) ? `<p style="color: #60a5fa;"><strong>Specific AS Needs:</strong> ${g.reqStandards.join(", ")}</p>` : "";
+
+    const card = document.createElement("div"); card.className = `goalCard ${colorClass}`;
+    card.innerHTML = `
+      <div class="goalHeader"><h3 class="goal-uni">${g.uni}</h3><h4 class="goal-deg">${g.deg}</h4></div>
+      <div class="goalDetails">
+        <p><strong>Required Score:</strong> ${displayRank}</p><p><strong>Required Subjects:</strong> ${g.req.length > 0 ? g.req.join(", ") : "None"}</p>
+        ${standardsHtml}${missingHtml}<p><strong>Status:</strong> ${statusText}</p>
+        ${g.note ? `<p style='font-size:13px; opacity:0.8; margin-top:10px;'><i>${g.note}</i></p>` : ""}
+      </div>
+      ${g.link ? `<a href="${g.link}" target="_blank" class="infoLink hide-on-print">Course Info ↗</a>` : ""}
+      <div class="progressBar hide-on-print"><div class="progressFill" style="width:${percent}%"></div></div>
+      <button class="removeBtn hide-on-print" onclick="removeGoal(${i})">Remove</button>
+    `;
+    goalList.appendChild(card);
+  });
+}
+
+function updateWarnings(){
+  warningList.innerHTML = ""; let warningCount = 0; const prof = appState.profiles[appState.currentProfile]; const subjects = getSubjects();
+  if(prof.goals) {
+    prof.goals.forEach(g=>{
+      const missingSubjects = g.req.filter(r=>!subjects.includes(r));
+      if(missingSubjects.length>0){ warningList.innerHTML += `<div class="warningCard"><b>${g.deg} (${g.uni})</b>: Looks like you're missing ${missingSubjects.join(", ")}</div>`; warningCount++; }
+      if(g.reqStandards && g.reqStandards.length > 0) { warningList.innerHTML += `<div class="warningCard medium"><b>${g.deg} Note:</b> Ensure you take specific internals/externals: ${g.reqStandards.join(", ")}</div>`; warningCount++; }
+    });
+  }
+  if(!ueReading.checked || !ueWriting.checked){ warningList.innerHTML += `<div class="warningCard medium">Missing UE Literacy</div>`; warningCount++; }
+  if(!ueNumeracy.checked){ warningList.innerHTML += `<div class="warningCard medium">Missing UE Numeracy</div>`; warningCount++; }
+  if (warningCount === 0) warningList.innerHTML = `<p class="noWarningsPlaceholder">Looking good! No missing requirements right now.</p>`;
+}
+
+function updateScholarships() {
+  const container = document.getElementById("scholarshipsContainer"); container.innerHTML = "";
+  topScholarships.forEach(schol => {
+    let colorClass = rankScore >= schol.target ? "bg-green" : (rankScore >= schol.target - 20 ? "bg-orange" : "bg-red");
+    let status = rankScore >= schol.target ? "Target Reached!" : `Short by ${schol.target - rankScore} points`;
+    const percent = Math.min((rankScore/schol.target)*100, 100);
+    container.innerHTML += `<div class="pathwayCard ${colorClass}" style="border:none; color:white; position:relative;"><span class="scholarBadge">${schol.value}</span><h3 style="color:white; margin:0; padding-right:80px;">${schol.name}</h3><p style="font-size:13px; margin: 4px 0 10px 0; opacity:0.8;">${schol.uni}</p><p style="font-size:14px; margin: 5px 0;"><strong>Target Rank:</strong> ${schol.target}+</p><p style="font-size:13px; margin: 5px 0; line-height:1.4;">${schol.desc}</p><p style="font-size:14px; margin: 10px 0 0 0; font-weight:bold;">${status}</p><div class="progressBar"><div class="progressFill" style="width:${percent}%"></div></div></div>`;
+  });
+}
+
+function generatePathways() {
+  const target = parseInt(targetScoreInput.value); const container = document.getElementById('pathwayResultsContainer'); container.innerHTML = ''; triggerSaveAndCalc();
+  if (isNaN(target) || target <= 0 || target > 320) { container.innerHTML = '<p style="color: #ef4444; margin-top: 10px;">Make sure you enter a valid score.</p>'; return; }
+
+  let e1 = 0, m1 = 0, a1 = Math.min(80, Math.ceil(target / 2));
+  if ((a1 * 2) < target && a1 === 80) { m1 = Math.min(80, target - 160); a1 -= m1; if ((a1 * 2 + m1 * 3) < target) { e1 = target - (a1 * 2 + m1 * 3); m1 -= e1; } }
+
+  let e2 = Math.floor(target / 4), m2 = 0, a2 = 0; let rem = target - (e2 * 4); if (rem === 3) m2 = 1; else if (rem === 2 || rem === 1) a2 = 1;
+
+  let e3 = 0, m3 = 0, a3 = 0, bestVar = Infinity;
+  for(let e=0; e<=80; e++) {
+    for(let m=0; m<=80-e; m++) {
+      let a = Math.max(0, Math.ceil((target - 4*e - 3*m)/2));
+      if (e+m+a <= 80 && (4*e + 3*m + 2*a) >= target) {
+         let avg = (e+m+a)/3; let variance = Math.pow(e-avg, 2) + Math.pow(m-avg, 2) + Math.pow(a-avg, 2);
+         if (variance + (Math.pow(80 - (e+m+a), 2) * 0.1) < bestVar) { bestVar = variance + (Math.pow(80 - (e+m+a), 2) * 0.1); e3 = e; m3 = m; a3 = a; }
+      }
+    }
+  }
+
+  container.innerHTML = `<div class="pathwayGrid">${createPathwayCard("Easiest Route", "Heavy on Achieved", e1, m1, a1)}${createPathwayCard("Balanced Spread", "A mix of everything", e3, m3, a3)}${createPathwayCard("Fewest Credits", "Mostly Excellence", e2, m2, a2)}</div>`;
+}
+
+function createPathwayCard(title, desc, e, m, a) {
+  const total = e + m + a; const score = (e*4) + (m*3) + (a*2);
+  return `<div class="pathwayCard"><h3>${title}</h3><p style="font-size: 13px; color: var(--text-muted); margin-top: -5px; margin-bottom: 15px;">${desc}</p><ul><li><span style="color: #10b981; font-weight: 600;">Excellence:</span> <span>${e}</span></li><li><span style="color: #3b82f6; font-weight: 600;">Merit:</span> <span>${m}</span></li><li><span style="color: #f59e0b; font-weight: 600;">Achieved:</span> <span>${a}</span></li><li class="total"><span style="color: var(--text-muted);">Total Credits:</span> <span>${total} / 80</span></li><li style="font-size: 12px; color: var(--text-muted); border:none; padding-top:5px;">Score Generated: ${score}</li></ul></div>`;
+}
+
+function runDegreeMatcher() {
+  const metContainer = document.getElementById("matcherMet"); const closeContainer = document.getElementById("matcherClose");
+  metContainer.innerHTML = ""; closeContainer.innerHTML = ""; document.getElementById("matcherResultsArea").style.display = "block";
+  const subjects = getSubjects(); const hasUE = (ueReading.checked && ueWriting.checked && ueNumeracy.checked);
+  
+  Object.keys(universities).forEach(uni => {
+    Object.keys(universities[uni]).forEach(deg => {
+      const data = universities[uni][deg]; const missingSubjects = data.req.filter(r => !subjects.includes(r)); const scoreDiff = rankScore - data.rank;
+      const cardHTML = `<div class="pathwayCard" style="border: 1px solid var(--border-color); padding: 15px;"><h3 style="font-size:16px; margin:0;">${deg}</h3><p style="font-size:12px; color:var(--text-muted); margin: 2px 0 10px 0;">${uni}</p><p style="margin:0; font-size:13px;"><strong>Requires:</strong> ${data.rank} Rank</p></div>`;
+      if (scoreDiff >= 0 && missingSubjects.length === 0 && hasUE) metContainer.innerHTML += cardHTML;
+      else if (scoreDiff >= -30) closeContainer.innerHTML += cardHTML;
+    });
+  });
+  
+  if(metContainer.innerHTML === "") metContainer.innerHTML = "<p style='color:var(--text-muted);'>No degrees met yet. Keep adding credits!</p>";
+  if(closeContainer.innerHTML === "") closeContainer.innerHTML = "<p style='color:var(--text-muted);'>You are not within 30 points of any remaining degrees.</p>";
+}
+
+function populateCompareDropdowns() {
+  const uniA = document.getElementById("compUniA"); const uniB = document.getElementById("compUniB");
+  const degA = document.getElementById("compDegA"); const degB = document.getElementById("compDegB");
+  uniA.innerHTML = ""; uniB.innerHTML = "";
+  Object.keys(universities).forEach(uni => { uniA.appendChild(new Option(uni, uni)); uniB.appendChild(new Option(uni, uni)); });
+  const updateDegs = (uniSelect, degSelect) => {
+    degSelect.innerHTML = ""; Object.keys(universities[uniSelect.value]).forEach(deg => degSelect.appendChild(new Option(deg, deg)));
+  };
+  uniA.addEventListener("change", () => updateDegs(uniA, degA)); uniB.addEventListener("change", () => updateDegs(uniB, degB));
+  updateDegs(uniA, degA); updateDegs(uniB, degB);
+}
+
+function runCompare() {
+  const uniA = document.getElementById("compUniA").value; const degA = document.getElementById("compDegA").value;
+  const uniB = document.getElementById("compUniB").value; const degB = document.getElementById("compDegB").value;
+  const dataA = universities[uniA][degA]; const dataB = universities[uniB][degB];
+  
+  document.getElementById("compareResults").style.display = "block";
+  document.getElementById("compTitleA").innerHTML = `${degA}<br><strong>${uniA}</strong>`;
+  document.getElementById("compTitleB").innerHTML = `${degB}<br><strong>${uniB}</strong>`;
+  document.getElementById("compRankA").innerText = dataA.rank; document.getElementById("compRankB").innerText = dataB.rank;
+  document.getElementById("compSubjA").innerText = dataA.req.length > 0 ? dataA.req.join(", ") : "None";
+  document.getElementById("compSubjB").innerText = dataB.req.length > 0 ? dataB.req.join(", ") : "None";
+  document.getElementById("compAsA").innerText = dataA.reqStandards && dataA.reqStandards.length > 0 ? dataA.reqStandards.join(", ") : "None";
+  document.getElementById("compAsB").innerText = dataB.reqStandards && dataB.reqStandards.length > 0 ? dataB.reqStandards.join(", ") : "None";
+  document.getElementById("compLinkA").innerHTML = dataA.link ? `<a href="${dataA.link}" target="_blank" style="color:var(--accent-primary);">View Page</a>` : "N/A";
+  document.getElementById("compLinkB").innerHTML = dataB.link ? `<a href="${dataB.link}" target="_blank" style="color:var(--accent-primary);">View Page</a>` : "N/A";
+}
+
+function calculateMock() {
+  const secured = parseInt(document.getElementById("mockSecuredScore").value) || 0;
+  const target = parseInt(document.getElementById("mockTargetScore").value) || 250;
+  const diff = target - secured;
+  const res = document.getElementById("mockResultsContainer");
+  
+  if (diff <= 0) { res.innerHTML = `<div class="warningCard" style="background:#166534; color:white;">You have already hit your target with your secured internals!</div>`; return; }
+  if (diff > 320) { res.innerHTML = `<div class="warningCard">Math impossible. You need ${diff} more points, which is over the 320 cap.</div>`; return; }
+  
+  let mE = Math.ceil(diff / 4); let mM = Math.ceil(diff / 3); let mA = Math.ceil(diff / 2);
+  
+  res.innerHTML = `
+    <div class="pathwayCard bg-default" style="border: 1px solid var(--border-color);">
+      <h3 style="margin-top:0;">Points Needed: ${diff}</h3>
+      <p style="color: var(--text-muted); font-size:14px;">To bridge the gap in your externals, you need exactly ONE of the following:</p>
+      <ul>
+        <li><span style="color: #10b981; font-weight: 600;">Excellence Credits Needed:</span> <span>~${mE}</span></li>
+        <li style="text-align:center; display:block; color:var(--text-muted); border:none; padding: 2px 0;">OR</li>
+        <li><span style="color: #3b82f6; font-weight: 600;">Merit Credits Needed:</span> <span>~${mM}</span></li>
+        <li style="text-align:center; display:block; color:var(--text-muted); border:none; padding: 2px 0;">OR</li>
+        <li><span style="color: #f59e0b; font-weight: 600;">Achieved Credits Needed:</span> <span>~${mA}</span></li>
+      </ul>
+    </div>
+  `;
 }
